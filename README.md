@@ -8,7 +8,7 @@ The goal is the **IKEA effect**: the robot does the hard part, and the user gets
 
 ## Running it
 
-It's one self-contained file, `index.html`, with no build step and no install.
+The app is three plain files, `index.html`, `styles.css` and `script.js`, with no build step and no install.
 
 - Double-click `index.html` to open it in Chrome, Edge, Firefox or Safari.
 - Or serve the folder: `python3 -m http.server 8000`, then open http://localhost:8000
@@ -31,7 +31,7 @@ Kids tap a circle once that topping is on it. When every circle is checked off, 
 
 ## How it works
 
-All of the code is in the `<script>` at the bottom of `index.html`, in sections:
+All of the code lives in `script.js`, in sections:
 
 1. **Find the pancake** (`analyze`): The photo is shrunk to about 260 px wide for speed. Golden-brown pixels are kept (hue 12–55°, saturation ≥ 0.22, brightness ≥ 0.40), then a circle is fitted to them. The center is their average position and the radius is the 97th-percentile distance, refined 3 times.
 2. **Find the syrup**: The program takes the median pancake color. Any pixel inside the circle whose color differs from it by more than the **threshold** counts as syrup. Because it compares colors instead of looking for "dark brown", it works for any sauce color. Small specks are then removed: one erode and dilate pass, then any blobs smaller than 0.2% of the pancake are dropped.
@@ -47,7 +47,7 @@ Layouts use a seeded random number generator (`mulberry32`), so the same seed al
 
 ### Adding a topping
 
-Add a line to the `TOPPINGS` list near the top of the script:
+Add a line to the `TOPPINGS` list near the top of `script.js`:
 
 ```js
 {id:'raspberry', name:'Raspberries', emoji:'🍇', color:'#c2185b', mm:15, count:6, max:12},
