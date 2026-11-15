@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pancake Topping Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fbf6ee; --ink:#2b2118; --muted:#7a6a58; --line:#eadfcd; --card:#fffdf9;
+    --accent:#e07a2f; --accent-ink:#fff; --good:#2f8f5b; --warn:#b26a00; --warn-bg:#fff4df;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{padding:18px 24px 6px;max-width:1240px;margin:0 auto}
+  .brand{font-family:Fredoka,system-ui,sans-serif;font-weight:700;font-size:26px;display:flex;align-items:center;gap:10px}
+  .tag{font:600 11px/1 system-ui;letter-spacing:.06em;text-transform:uppercase;background:#f3e3cc;color:#8a5a22;padding:5px 8px;border-radius:99px}
+  header p{margin:4px 0 0;color:var(--muted)}
+  .layout{max-width:1240px;margin:0 auto;padding:14px 24px 40px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+  @media (max-width:860px){.layout{grid-template-columns:1fr}}
+  .stage{position:relative;width:100%;max-width:680px;aspect-ratio:1;margin:0 auto;border-radius:20px;overflow:hidden;background:#1d1712;box-shadow:0 10px 30px rgba(60,35,10,.18);touch-action:manipulation}
+  .stage canvas{position:absolute;inset:0;width:100%;height:100%}
+  #fx{pointer-events:none}
+  .dropHint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(224,122,47,.85);color:#fff;font:700 28px Fredoka,sans-serif}
+  .celebrate{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(29,23,18,.55)}
+  .celebrate .card{background:#fff;border-radius:22px;padding:26px 30px;text-align:center;max-width:80%;font-family:Fredoka,sans-serif}
+  .celebrate .big{font-size:56px;line-height:1}
+  .celebrate h2{margin:8px 0 4px;font-size:30px}
+  .celebrate p{margin:0 0 16px;color:var(--muted);font-family:system-ui,sans-serif}
+  .kid{max-width:680px;margin:16px auto 0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;font-family:Fredoka,system-ui,sans-serif}
+  .kid h2{margin:0;font-size:24px}
+  .kid p{margin:2px 0 12px;color:var(--muted);font-weight:500}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .chip{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 8px;border-radius:99px;background:#fff;border:2px solid var(--c);font-weight:600;font-size:17px}
+  .chip .dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 18%,white);font-size:18px}
+  .chip small{color:var(--muted);font-weight:500;font-size:13px}
+  .progressRow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .bar{flex:1;min-width:120px;height:14px;border-radius:99px;background:#f1e6d6;overflow:hidden}
+  #barFill{height:100%;width:0;background:linear-gradient(90deg,#f0a04b,#e07a2f);transition:width .3s}
+  #progText{font-weight:600;color:var(--muted);min-width:90px}
+  button{font:inherit;cursor:pointer}
+  .donebtn,.celebrate button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:14px;padding:11px 20px;font:700 18px Fredoka,sans-serif;box-shadow:0 3px 0 #b55a17}
+  .donebtn:active,.celebrate button:active{transform:translateY(2px);box-shadow:0 1px 0 #b55a17}
+
+  .panel{display:flex;flex-direction:column;gap:14px}
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+  .sec h3{margin:0 0 10px;font:600 13px/1 system-ui;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .demos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 6px;font-size:13px;color:var(--ink)}
+  .btn:hover{border-color:#d8c4a6}
+  .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .upload{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;border:1.5px dashed #d8c4a6;border-radius:10px;padding:10px;color:#8a5a22;font-weight:600;cursor:pointer}
+  .upload input{display:none}
+  .hint{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+  .status{font-size:13.5px;display:flex;flex-direction:column;gap:5px}
+  .status .ok{color:var(--good)}
+  .status .warn{color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:6px 8px}
+  .trow{display:flex;align-items:center;gap:8px;padding:5px 0}
+  .trow label{flex:1;display:flex;align-items:center;gap:8px;cursor:pointer}
+  .trow .em{font-size:18px;width:22px;text-align:center}
+  .step{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+  .step button{border:0;background:none;width:28px;height:28px;font-size:16px;color:var(--ink)}
+  .step span{min-width:26px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600}
+  .trow.off .step{opacity:.35;pointer-events:none}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#f4ebdd;padding:4px;border-radius:12px}
+  .seg.two{grid-template-columns:1fr 1fr}
+  .seg button{border:0;background:none;border-radius:9px;padding:7px 4px;font-size:13px;color:var(--ink)}
+  .seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+  .row2{display:flex;gap:6px;margin-top:8px}
+  .row2 .btn{flex:1;padding:8px}
+  .check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13.5px;cursor:pointer}
+  details.sec summary{cursor:pointer;font:600 13px/1 system-ui;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);list-style:none}
+  details.sec summary::before{content:"▸ ";}
+  details.sec[open] summary::before{content:"▾ ";}
+  details.sec[open] summary{margin-bottom:10px}
+  .slider{margin:8px 0 12px}
+  .slider div{display:flex;justify-content:space-between;font-size:13px}
+  .slider b{font-variant-numeric:tabular-nums}
+  .slider input{width:100%;accent-color:var(--accent)}
+  textarea{width:100%;height:150px;font:12px/1.4 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff;resize:vertical}
+  .how{font-size:13.5px;margin:0;padding-left:18px}
+  .how li{margin-bottom:5px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">🥞 Pancake Topping Guide <span class="tag">prototype</span></div>
+  <p>The robot draws the syrup. The camera finds it. This screen shows where your toppings go.</p>
+</header>
+
+<main class="layout">
+  <section>
+    <div class="stage" id="stage">
+      <canvas id="view"></canvas>
+      <canvas id="fx"></canvas>
+      <div class="dropHint" id="dropHint" hidden>Drop the pancake photo</div>
+      <div class="celebrate" id="celebrate" hidden>
+        <div class="card">
+          <div class="big">🎉</div>
+          <h2>You decorated it!</h2>
+          <p>The robot did the syrup. You did the rest.</p>
+          <button id="again">Decorate another</button>
+        </div>
+      </div>
+    </div>
+    <div class="kid">
+      <h2>Your turn!</h2>
+      <p>Put each topping on a matching circle. Tap a circle when it's on.</p>
+      <div class="legend" id="legend"></div>
+      <div class="progressRow">
+        <div class="bar"><div id="barFill"></div></div>
+        <span id="progText"></span>
+        <button class="donebtn" id="done">I'm done! 🎉</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="sec">
+      <h3>Pancake photo</h3>
+      <div class="demos" id="demos"></div>
+      <label class="upload">📷 Upload overhead photo<input type="file" id="file" accept="image/*"></label>
+      <p class="hint">The robot would read its overhead camera directly. For now, upload a top-down photo or drop one on the pancake.</p>
+    </div>
+
+    <div class="sec">
+      <h3>What the camera found</h3>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="sec">
+      <h3>Toppings</h3>
+      <div id="toppings"></div>
+    </div>
+
+    <div class="sec">
+      <h3>Layout</h3>
+      <div class="seg" id="styleSeg">
+        <button data-v="hug">Hug the syrup</button>
+        <button data-v="turns">Take turns</button>
+        <button data-v="sprinkle">Sprinkle</button>
+      </div>
+      <div class="row2">
+        <button class="btn" id="shuffle">🔀 Shuffle</button>
+        <button class="btn" id="surprise">✨ Surprise me</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Screen</h3>
+      <div class="seg two" id="modeSeg">
+        <button data-v="photo">Photo + guides</button>
+        <button data-v="projector">Projector</button>
+      </div>
+      <label class="check"><input type="checkbox" id="debug"> Show what the camera detected</label>
+    </div>
+
+    <details class="sec">
+      <summary>Tuning</summary>
+      <div class="slider"><div><span>Pancake diameter</span><b id="diamV"></b></div><input type="range" id="diam" min="80" max="250" step="5"></div>
+      <div class="slider"><div><span>Gap from syrup</span><b id="gapV"></b></div><input type="range" id="gap" min="0" max="20" step="1"></div>
+      <div class="slider"><div><span>Syrup detection threshold</span><b id="threshV"></b></div><input type="range" id="thresh" min="20" max="120" step="1"></div>
+      <p class="hint">Lower threshold = picks up fainter sauce, but also brown cooking spots. Turn on “Show what the camera detected” while you adjust it.</p>
+    </details>
+
+    <details class="sec">
+      <summary>Export for the robot team</summary>
+      <textarea id="json" readonly></textarea>
+      <div class="row2"><button class="btn" id="copy">Copy JSON</button></div>
+    </details>
+
+    <details class="sec">
+      <summary>How it works</summary>
+      <ol class="how">
+        <li><b>Find the pancake:</b> keep the golden-brown pixels and fit a circle to them.</li>
+        <li><b>Find the syrup:</b> inside that circle, mark anything whose color is far from the pancake's usual color. This works for chocolate, strawberry sauce or any flat topping. Then clean up specks.</li>
+        <li><b>Distance map:</b> for every pixel, measure how far it is from the nearest syrup.</li>
+        <li><b>Place spots:</b> <i>Hug</i> walks rings at a set distance around the syrup. <i>Take turns</i> alternates toppings on one ring. <i>Sprinkle</i> scatters them, nearest the syrup first. Spots never overlap the syrup, each other, or the pancake edge.</li>
+        <li><b>Show everything at once:</b> real-size circles in millimetres, using the pancake diameter.</li>
+      </ol>
+    </details>
+  </aside>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+const TOPPINGS = [
+  {id:'blueberry',  name:'Blueberries',       emoji:'🫐', color:'#4f6bd8', mm:12, count:10, max:24},
+  {id:'strawberry', name:'Strawberry slices', emoji:'🍓', color:'#e2384d', mm:24, count:6,  max:12},
+  {id:'banana',     name:'Banana slices',     emoji:'🍌', color:'#d9b21f', mm:24, count:5,  max:12},
+  {id:'chip',       name:'Chocolate chips',   emoji:'🍫', color:'#6b3e26', mm:8,  count:14, max:30},
+  {id:'cherry',     name:'Cherries',          emoji:'🍒', color:'#b0123a', mm:18, count:3,  max:8},
+];
+const TBY = Object.fromEntries(TOPPINGS.map(t => [t.id, t]));
+
+const S = {
+  src:null, srcW:0, srcH:0, A:null, maskCanvas:null,
+  spots:[], short:[], placed:new Set(),
+  seed:7, style:'hug', mode:'photo', debug:false,
+  diam:150, gap:4, thresh:55, demo:'heart',
+  counts:{}, enabled:{}
+};
+TOPPINGS.forEach(t => { S.counts[t.id] = t.count; S.enabled[t.id] = (t.id === 'blueberry' || t.id === 'strawberry'); });
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ---------------- Demo pancakes (stand-in for the overhead camera) ---------------- */
+const DEMOS = {
+  heart:'Heart', smiley:'Smiley', star:'Star', letter:'Letter A', spiral:'Spiral', pink:'Pink sauce'
+};
+function makeDemo(kind){
+  const c = document.createElement('canvas'); c.width = c.height = 600;
+  const x = c.getContext('2d'); const rng = mulberry32(42);
+  const g0 = x.createLinearGradient(0,0,600,600); g0.addColorStop(0,'#3b4651'); g0.addColorStop(1,'#283039');
+  x.fillStyle = g0; x.fillRect(0,0,600,600);
+  x.save(); x.shadowColor='rgba(0,0,0,.35)'; x.shadowBlur=25;
+  x.fillStyle='#ebe8e1'; x.beginPath(); x.arc(300,300,284,0,Math.PI*2); x.fill(); x.restore();
+  const PX=306, PY=294, PR=226;
+  const g = x.createRadialGradient(PX-30,PY-30,20,PX,PY,PR);
+  g.addColorStop(0,'#ebb860'); g.addColorStop(.8,'#d79a45'); g.addColorStop(1,'#bf7f33');
+  x.fillStyle=g; x.beginPath(); x.arc(PX,PY,PR,0,Math.PI*2); x.fill();
+  for(let i=0;i<320;i++){ // browning speckles
+    const a=rng()*Math.PI*2, r=Math.sqrt(rng())*PR*.95;
+    x.fillStyle=`rgba(${150+rng()*40|0},${90+rng()*30|0},30,${.08+rng()*.12})`;
+    x.beginPath(); x.arc(PX+Math.cos(a)*r, PY+Math.sin(a)*r, 2+rng()*7, 0, Math.PI*2); x.fill();
+  }
+  x.save(); x.translate(PX,PY);
+  const sauce = kind==='pink' ? '#c2185b' : '#3a1d10';
+  x.strokeStyle = x.fillStyle = sauce; x.lineWidth=15; x.lineCap='round'; x.lineJoin='round';
+  const path = () => {
+    x.beginPath();
+    if(kind==='heart'){ x.moveTo(0,70); x.bezierCurveTo(-130,-10,-70,-125,0,-55); x.bezierCurveTo(70,-125,130,-10,0,70); }
+    else if(kind==='smiley' || kind==='pink'){ x.arc(0,0,92,0,Math.PI*2); x.moveTo(43,14); x.arc(0,14,43,0.12*Math.PI,0.88*Math.PI); }
+    else if(kind==='star'){ for(let i=0;i<=10;i++){const r=i%2?42:100,a=-Math.PI/2+i*Math.PI/5; x.lineTo(Math.cos(a)*r,Math.sin(a)*r);} }
+    else if(kind==='spiral'){ for(let t=0;t<4.6*Math.PI;t+=.05){const r=6+10.5*t; x.lineTo(Math.cos(t)*r,Math.sin(t)*r);} }
+  };
+  if(kind==='letter'){ x.font='bold 230px Arial, sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('A',0,14); }
+  else { path(); x.stroke(); if(kind==='smiley'||kind==='pink'){ x.beginPath(); x.arc(-34,-28,11,0,7); x.arc(34,-28,11,0,7); x.fill(); } }
+  // glossy highlight on the sauce
+  x.translate(-3,-3); x.strokeStyle='rgba(255,225,200,.22)'; x.lineWidth=3;
+  if(kind!=='letter'){ path(); x.stroke(); }
+  x.restore();
+  return c;
+}
+
+/* ---------------- Vision: find pancake + syrup ---------------- */
+function analyze(src, W, H, T){
+  const sc = Math.min(1, 260/Math.max(W,H));
+  const w = Math.max(1, Math.round(W*sc)), h = Math.max(1, Math.round(H*sc));
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const cx2 = c.getContext('2d', {willReadFrequently:true}); cx2.drawImage(src,0,0,w,h);
+  const d = cx2.getImageData(0,0,w,h).data; const N=w*h;
+
+  // 1. pancake-colored pixels (golden brown)
+  const cand = new Uint8Array(N); let sx=0, sy=0, cnt=0;
+  for(let i=0;i<N;i++){
+    const r=d[i*4], g=d[i*4+1], b=d[i*4+2];
+    const mx=Math.max(r,g,b), mn=Math.min(r,g,b), dl=mx-mn;
+    const v=mx/255, s=mx?dl/mx:0; let hu=0;
+    if(dl){ if(mx===r) hu=60*(((g-b)/dl)%6); else if(mx===g) hu=60*((b-r)/dl+2); else hu=60*((r-g)/dl+4); if(hu<0) hu+=360; }
+    if(hu>=12 && hu<=55 && s>=.22 && v>=.40){ cand[i]=1; sx+=i%w; sy+=(i/w)|0; cnt++; }
+  }
+  // 2. fit a circle
+  let cx, cy, rad; const found = cnt > N*0.03;
+  if(found){
+    cx=sx/cnt; cy=sy/cnt; rad=Math.max(w,h);
+    for(let it=0; it<3; it++){
+      const ds=[]; let nx=0, ny=0, nc=0;
+      for(let i=0;i<N;i++) if(cand[i]){ const x=i%w, y=(i/w)|0, dd=Math.hypot(x-cx,y-cy); if(dd<rad*1.05){ ds.push(dd); nx+=x; ny+=y; nc++; } }
+      if(!nc) break;
+      ds.sort((a,b)=>a-b); rad=ds[Math.floor(ds.length*.97)]; cx=nx/nc; cy=ny/nc;
+    }
+  } else { cx=w/2; cy=h/2; rad=.45*Math.min(w,h); }
+
+  // 3. typical pancake color (median)
+  const hist=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)]; let hc=0;
+  for(let i=0;i<N;i++){ const x=i%w, y=(i/w)|0; if((found?cand[i]:1) && Math.hypot(x-cx,y-cy)<rad*.85){ hist[0][d[i*4]]++; hist[1][d[i*4+1]]++; hist[2][d[i*4+2]]++; hc++; } }
+  const pc = hist.map(hh => { let acc=0; for(let k=0;k<256;k++){ acc+=hh[k]; if(acc>=hc/2) return k; } return 128; });
+
+  // 4. syrup = clearly different color, inside the pancake
+  let mask = new Uint8Array(N);
+  for(let i=0;i<N;i++){
+    const x=i%w, y=(i/w)|0; if(Math.hypot(x-cx,y-cy) > rad*.96) continue;
+    const dr=d[i*4]-pc[0], dg=d[i*4+1]-pc[1], db=d[i*4+2]-pc[2];
+    if(Math.sqrt(2*dr*dr+4*dg*dg+3*db*db)/3 > T) mask[i]=1;
+  }
+  mask = morph(morph(mask,w,h,'erode'),w,h,'dilate');      // remove specks
+  mask = dropSmall(mask, w, h, Math.max(6, .002*Math.PI*rad*rad));
+  let syrupPx=0; for(let i=0;i<N;i++) syrupPx+=mask[i];
+
+  return {w,h,scale:sc,cx,cy,rad,mask,dist:chamfer(mask,w,h),found,syrupPx,
+          syrupFrac: syrupPx/(Math.PI*(rad*.96)**2), pc};
+}
+function morph(m,w,h,op){
+  const o=new Uint8Array(w*h), er=op==='erode';
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+    let v=er?1:0;
+    for(let dy=-1;dy<=1&&(er?v:!v);dy++) for(let dx=-1;dx<=1;dx++){
+      const X=x+dx, Y=y+dy; const s=(X<0||Y<0||X>=w||Y>=h)?0:m[Y*w+X];
+      if(er && !s){v=0;break} if(!er && s){v=1;break}
+    }
+    o[y*w+x]=v;
+  }
+  return o;
+}
+function dropSmall(m,w,h,minA){
+  const seen=new Uint8Array(w*h), out=new Uint8Array(w*h), st=new Int32Array(w*h);
+  for(let i=0;i<w*h;i++){
+    if(!m[i]||seen[i]) continue;
+    let sp=0, comp=[]; st[sp++]=i; seen[i]=1;
+    while(sp){ const j=st[--sp]; comp.push(j); const x=j%w, y=(j/w)|0;
+      for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const X=x+dx,Y=y+dy; if(X<0||Y<0||X>=w||Y>=h) continue; const k=Y*w+X; if(m[k]&&!seen[k]){seen[k]=1; st[sp++]=k;} } }
+    if(comp.length>=minA) for(const j of comp) out[j]=1;
+  }
+  return out;
+}
+function chamfer(m,w,h){ // distance (px) to nearest syrup pixel
+  const INF=1e9, D=new Float32Array(w*h);
+  for(let i=0;i<w*h;i++) D[i]=m[i]?0:INF;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x; let v=D[i];
+    if(x>0) v=Math.min(v,D[i-1]+3);
+    if(y>0){ v=Math.min(v,D[i-w]+3); if(x>0) v=Math.min(v,D[i-w-1]+4); if(x<w-1) v=Math.min(v,D[i-w+1]+4); }
+    D[i]=v; }
+  for(let y=h-1;y>=0;y--) for(let x=w-1;x>=0;x--){ const i=y*w+x; let v=D[i];
+    if(x<w-1) v=Math.min(v,D[i+1]+3);
+    if(y<h-1){ v=Math.min(v,D[i+w]+3); if(x<w-1) v=Math.min(v,D[i+w+1]+4); if(x>0) v=Math.min(v,D[i+w-1]+4); }
+    D[i]=v; }
+  for(let i=0;i<w*h;i++) D[i]=D[i]>=INF?INF:D[i]/3;
+  return D;
+}
+
+/* ---------------- Planning: where do toppings go ---------------- */
+function orderChain(pts, rng){
+  const n=pts.length; if(!n) return [];
+  const used=new Uint8Array(n), out=[]; let cur=Math.floor(rng()*n);
+  for(let k=0;k<n;k++){
+    used[cur]=1; out.push(pts[cur]);
+    let best=-1, bd=1e18; const [x,y]=pts[cur];
+    for(let j=0;j<n;j++){ if(used[j]) continue; const dx=pts[j][0]-x, dy=pts[j][1]-y, dd=dx*dx+dy*dy; if(dd<bd){bd=dd;best=j; if(dd<=1) break;} }
+    if(best<0) break; cur=best;
+  }
+  return out;
+}
+function plan(A){
+  const {w,h}=A, ppm=A.rad/(S.diam/2), gapPx=S.gap*ppm, edgePx=3*ppm, spPx=2*ppm;
+  const rng=mulberry32(S.seed);
+  const items=TOPPINGS.filter(t=>S.enabled[t.id]&&S.counts[t.id]>0)
+    .map(t=>({t, rr:t.mm/2*ppm, need:S.counts[t.id], want:S.counts[t.id]}));
+  const spots=[]; const hasSyrup=A.syrupPx>0;
+  const D=(x,y)=>A.dist[Math.min(h-1,y|0)*w+Math.min(w-1,x|0)];
+  const edgeOk=(x,y,rr)=>A.rad-Math.hypot(x-A.cx,y-A.cy) >= rr+edgePx;
+  const clear=(x,y,rr)=>{ for(const s of spots){ const dx=s.x-x, dy=s.y-y, m=s.rr+rr+spPx; if(dx*dx+dy*dy<m*m) return false; } return true; };
+  const put=(it,x,y)=>{ spots.push({tid:it.t.id,x,y,rr:it.rr}); it.need--; };
+  const ring=(target,rr)=>{ const band=Math.max(.75,rr*.12), pts=[];
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ if(Math.abs(A.dist[y*w+x]-target)<=band && edgeOk(x+.5,y+.5,rr)) pts.push([x+.5,y+.5]); }
+    return orderChain(pts,rng); };
+  const chainLen=ch=>{ let L=0; for(let i=1;i<ch.length;i++){ const s=Math.hypot(ch[i][0]-ch[i-1][0],ch[i][1]-ch[i-1][1]); if(s<=3) L+=s; } return L; };
+  const walk=(ch,step,attempt)=>{ let acc=Infinity;
+    for(let i=0;i<ch.length;i++){
+      if(i>0){ const s=Math.hypot(ch[i][0]-ch[i-1][0],ch[i][1]-ch[i-1][1]); acc = s>3 ? Infinity : acc+s; }
+      if(acc>=step && attempt(ch[i][0],ch[i][1])) acc=0;
+    } };
+
+  if(hasSyrup && S.style==='hug'){
+    let inner=gapPx;
+    for(const it of items){
+      const target=inner+it.rr, ch=ring(target,it.rr);
+      const step=Math.max(2*it.rr+spPx, chainLen(ch)/Math.max(1,it.need));
+      walk(ch,step,(x,y)=>{ if(it.need<=0||!clear(x,y,it.rr)) return false; put(it,x,y); return true; });
+      inner=target+it.rr+spPx;
+    }
+  } else if(hasSyrup && S.style==='turns' && items.length){
+    const mr=Math.max(...items.map(i=>i.rr)), ch=ring(gapPx+mr,mr);
+    const total=items.reduce((a,i)=>a+i.need,0); let ptr=0;
+    walk(ch, Math.max(2*mr+spPx, chainLen(ch)/Math.max(1,total)), (x,y)=>{
+      for(let k=0;k<items.length;k++){ const it=items[(ptr+k)%items.length]; if(it.need<=0) continue;
+        if(!clear(x,y,it.rr)) return false; put(it,x,y); ptr=(ptr+k+1)%items.length; return true; }
+      return false; });
+  }
+  // Sprinkle (also catches anything the rings had no room for)
+  const left=items.filter(i=>i.need>0).sort((a,b)=>b.rr-a.rr);
+  if(left.length){
+    const minR=Math.min(...left.map(i=>i.rr)), cands=[];
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const X=x+.5, Y=y+.5, dv=A.dist[y*w+x];
+      if(edgeOk(X,Y,minR) && dv>=gapPx+minR) cands.push({x:X,y:Y,k: hasSyrup ? dv*(.45+rng()) : rng()}); }
+    cands.sort((a,b)=>a.k-b.k);
+    for(const it of left) for(const c of cands){ if(it.need<=0) break;
+      if(!edgeOk(c.x,c.y,it.rr) || D(c.x,c.y)<gapPx+it.rr || !clear(c.x,c.y,it.rr)) continue; put(it,c.x,c.y); }
+  }
+  return {spots, short: items.filter(i=>i.need>0).map(i=>({t:i.t, got:i.want-i.need, want:i.want}))};
+}
+
+/* ---------------- Pipeline ---------------- */
+function setSource(img,w,h){ S.src=img; S.srcW=w; S.srcH=h; runAnalyze(); }
+function runAnalyze(){
+  if(!S.src) return;
+  S.A=analyze(S.src,S.srcW,S.srcH,S.thresh);
+  const A=S.A, mc=document.createElement('canvas'); mc.width=A.w; mc.height=A.h;
+  const mx=mc.getContext('2d'), id=mx.createImageData(A.w,A.h);
+  for(let i=0;i<A.w*A.h;i++) if(A.mask[i]){ id.data[i*4]=255; id.data[i*4+1]=40; id.data[i*4+2]=200; id.data[i*4+3]=170; }
+  mx.putImageData(id,0,0); S.maskCanvas=mc;
+  runPlan();
+}
+function runPlan(){ if(!S.A) return; const r=plan(S.A); S.spots=r.spots; S.short=r.short; S.placed=new Set(); $('#celebrate').hidden=true; updateUI(); }
+
+/* ---------------- Drawing ---------------- */
+const cv=$('#view'), ctx=cv.getContext('2d'), fx=$('#fx');
+function geom(){
+  const A=S.A, size=cv.width, C=size/2, R=size*.42, k=R/(A.rad/A.scale);
+  const cxI=A.cx/A.scale, cyI=A.cy/A.scale;
+  return {size,C,R,k,cxI,cyI, w2c:(x,y)=>[C+(x/A.scale-cxI)*k, C+(y/A.scale-cyI)*k], wr:r=>r/A.scale*k};
+}
+function draw(t){
+  const size=cv.width; ctx.clearRect(0,0,size,size);
+  if(!S.A){ ctx.fillStyle='#1d1712'; ctx.fillRect(0,0,size,size); return; }
+  const G=geom(), A=S.A;
+  if(S.mode==='photo'){
+    ctx.fillStyle='#1d1712'; ctx.fillRect(0,0,size,size);
+    ctx.drawImage(S.src, G.C-G.cxI*G.k, G.C-G.cyI*G.k, S.srcW*G.k, S.srcH*G.k);
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,size,size); ctx.arc(G.C,G.C,G.R*1.03,0,Math.PI*2);
+    ctx.fillStyle='rgba(22,15,10,.62)'; ctx.fill('evenodd'); ctx.restore();
+  } else {
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,size,size);
+    ctx.save(); ctx.setLineDash([6*DPR,8*DPR]); ctx.strokeStyle='rgba(255,255,255,.28)'; ctx.lineWidth=2*DPR;
+    ctx.beginPath(); ctx.arc(G.C,G.C,G.R,0,Math.PI*2); ctx.stroke(); ctx.restore();
+  }
+  if(S.debug){
+    ctx.drawImage(S.maskCanvas, G.C-G.cxI*G.k, G.C-G.cyI*G.k, A.w/A.scale*G.k, A.h/A.scale*G.k);
+    ctx.strokeStyle='#5cff7a'; ctx.lineWidth=2*DPR; ctx.beginPath(); ctx.arc(G.C,G.C,G.R,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(10*DPR,10*DPR,230*DPR,48*DPR);
+    ctx.font=`600 ${12*DPR}px system-ui`; ctx.fillStyle='#5cff7a'; ctx.fillText('green = pancake edge found',18*DPR,30*DPR);
+    ctx.fillStyle='#ff5ad2'; ctx.fillText('pink = syrup found',18*DPR,48*DPR);
+  }
+  S.spots.forEach((s,i)=>{
+    const T=TBY[s.tid], [x,y]=G.w2c(s.x,s.y), r=G.wr(s.rr), done=S.placed.has(i);
+    const pulse = done ? 1 : 1 + .07*Math.sin(t*3.2 + i*.7);
+    ctx.save();
+    if(done){
+      ctx.globalAlpha=.9; ctx.fillStyle=T.color; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1; ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(2*DPR,r*.16); ctx.lineCap='round'; ctx.lineJoin='round';
+      ctx.beginPath(); ctx.moveTo(x-r*.42,y+r*.02); ctx.lineTo(x-r*.1,y+r*.34); ctx.lineTo(x+r*.45,y-r*.32); ctx.stroke();
+    } else {
+      ctx.shadowColor=T.color; ctx.shadowBlur=10*DPR;
+      ctx.fillStyle = S.mode==='photo' ? 'rgba(255,255,255,.82)' : 'rgba(255,255,255,.12)';
+      ctx.beginPath(); ctx.arc(x,y,r*pulse,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+      ctx.strokeStyle = S.mode==='photo' ? T.color : '#fff'; ctx.lineWidth=Math.max(2.5*DPR, r*.16);
+      ctx.setLineDash([Math.max(3*DPR,r*.35), Math.max(2*DPR,r*.2)]);
+      ctx.beginPath(); ctx.arc(x,y,r*pulse,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+      const fs=Math.max(11*DPR, r*1.15);
+      ctx.font=`${fs}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+      ctx.fillStyle='#000'; // color-emoji glyphs inherit fillStyle alpha
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(T.emoji,x,y+fs*.05);
+    }
+    ctx.restore();
+  });
+}
+function loop(ts){ draw(ts/1000); requestAnimationFrame(loop); }
+
+function resize(){
+  const s=Math.round($('#stage').clientWidth*DPR);
+  if(s && cv.width!==s){ cv.width=cv.height=fx.width=fx.height=s; }
+}
+new ResizeObserver(resize).observe($('#stage'));
+
+/* ---------------- Interaction ---------------- */
+cv.addEventListener('pointerdown', e=>{
+  if(!S.A || !S.spots.length) return;
+  const rc=cv.getBoundingClientRect(), px=(e.clientX-rc.left)*cv.width/rc.width, py=(e.clientY-rc.top)*cv.height/rc.height;
+  const G=geom(); let best=-1, bd=Infinity;
+  S.spots.forEach((s,i)=>{ const [x,y]=G.w2c(s.x,s.y), dd=Math.hypot(x-px,y-py); if(dd<G.wr(s.rr)+14*DPR && dd<bd){bd=dd;best=i;} });
+  if(best<0) return;
+  S.placed.has(best) ? S.placed.delete(best) : S.placed.add(best);
+  updateKid();
+  if(S.placed.size===S.spots.length) setTimeout(celebrate,350);
+});
+function celebrate(){
+  $('#celebrate').hidden=false;
+  const c=fx.getContext('2d'), rng=Math.random, cols=['#e07a2f','#f2c14e','#4f6bd8','#e2384d','#2f8f5b','#ff8ac2'];
+  const P=Array.from({length:150},()=>({x:fx.width/2,y:fx.height*.45,vx:(rng()-.5)*16*DPR,vy:(-rng()*15-4)*DPR,s:(4+rng()*6)*DPR,c:cols[rng()*cols.length|0],r:rng()*6,vr:(rng()-.5)*.4}));
+  const t0=performance.now();
+  (function f(t){ c.clearRect(0,0,fx.width,fx.height);
+    for(const p of P){ p.vy+=.38*DPR; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr;
+      c.save(); c.translate(p.x,p.y); c.rotate(p.r); c.fillStyle=p.c; c.fillRect(-p.s/2,-p.s/4,p.s,p.s/2); c.restore(); }
+    if(t-t0<3500) requestAnimationFrame(f); else c.clearRect(0,0,fx.width,fx.height);
+  })(t0);
+}
+$('#done').onclick=celebrate;
+$('#again').onclick=()=>{ S.placed=new Set(); $('#celebrate').hidden=true; updateKid(); };
+
+// demo buttons
+for(const [k,label] of Object.entries(DEMOS)){
+  const b=document.createElement('button'); b.className='btn'; b.textContent=label; b.dataset.k=k;
+  b.onclick=()=>loadDemo(k); $('#demos').appendChild(b);
+}
+function loadDemo(k){ S.demo=k; const c=makeDemo(k); setSource(c,c.width,c.height); markDemo(); }
+function markDemo(){ document.querySelectorAll('#demos .btn').forEach(b=>b.classList.toggle('on', b.dataset.k===S.demo)); }
+
+// upload / drop
+function loadFile(f){
+  if(!f || !f.type.startsWith('image/')) return;
+  const url=URL.createObjectURL(f), img=new Image();
+  img.onload=()=>{ const sc=Math.min(1,1200/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*sc); c.height=Math.round(img.naturalHeight*sc);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+    S.demo=null; markDemo(); setSource(c,c.width,c.height); };
+  img.onerror=()=>{ URL.revokeObjectURL(url); };
+  img.src=url;
+}
+$('#file').onchange=e=>{ loadFile(e.target.files[0]); e.target.value=''; };
+const stage=$('#stage');
+stage.addEventListener('dragover',e=>{ e.preventDefault(); $('#dropHint').hidden=false; });
+stage.addEventListener('dragleave',()=>{ $('#dropHint').hidden=true; });
+stage.addEventListener('drop',e=>{ e.preventDefault(); $('#dropHint').hidden=true; loadFile(e.dataTransfer.files[0]); });
+
+// toppings list
+function buildToppings(){
+  const box=$('#toppings'); box.innerHTML='';
+  for(const t of TOPPINGS){
+    const row=document.createElement('div'); row.className='trow'+(S.enabled[t.id]?'':' off');
+    row.innerHTML=`<label><input type="checkbox" ${S.enabled[t.id]?'checked':''}><span class="em">${t.emoji}</span>${t.name}</label>
+      <div class="step"><button aria-label="fewer">−</button><span>${S.counts[t.id]}</span><button aria-label="more">+</button></div>`;
+    const [cb]=row.querySelectorAll('input'), [minus,plus]=row.querySelectorAll('button');
+    cb.onchange=()=>{ S.enabled[t.id]=cb.checked; buildToppings(); runPlan(); };
+    minus.onclick=()=>{ S.counts[t.id]=Math.max(1,S.counts[t.id]-1); buildToppings(); runPlan(); };
+    plus.onclick=()=>{ S.counts[t.id]=Math.min(t.max,S.counts[t.id]+1); buildToppings(); runPlan(); };
+    box.appendChild(row);
+  }
+}
+function seg(id,key,after){
+  document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{ S[key]=b.dataset.v; markSeg(); after(); });
+}
+function markSeg(){
+  document.querySelectorAll('#styleSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.style));
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.mode));
+}
+seg('styleSeg','style',runPlan); seg('modeSeg','mode',()=>{});
+$('#shuffle').onclick=()=>{ S.seed=(Math.random()*1e9)|0; runPlan(); };
+$('#surprise').onclick=()=>{
+  const r=Math.random; S.seed=(r()*1e9)|0;
+  S.style=['hug','turns','sprinkle'][r()*3|0];
+  const pick=[...TOPPINGS].sort(()=>r()-.5).slice(0, r()<.5?1:2);  // notes: keep it to one or two toppings
+  TOPPINGS.forEach(t=>S.enabled[t.id]=pick.includes(t));
+  pick.forEach(t=>S.counts[t.id]=Math.max(2,Math.round(t.count*(.6+r()*.7))));
+  buildToppings(); markSeg(); runPlan();
+};
+$('#debug').onchange=e=>{ S.debug=e.target.checked; };
+
+function bindSlider(id,key,fmt,after){
+  const el=$('#'+id); el.value=S[key]; $('#'+id+'V').textContent=fmt(S[key]);
+  el.oninput=()=>{ S[key]=+el.value; $('#'+id+'V').textContent=fmt(S[key]); after(); };
+}
+bindSlider('diam','diam',v=>v+' mm',runPlan);
+bindSlider('gap','gap',v=>v+' mm',runPlan);
+bindSlider('thresh','thresh',v=>v,runAnalyze);
+
+$('#copy').onclick=async()=>{
+  const ta=$('#json');
+  try{ await navigator.clipboard.writeText(ta.value); $('#copy').textContent='Copied ✓'; }
+  catch(e){ ta.select(); $('#copy').textContent='Press Ctrl/Cmd+C'; }
+  setTimeout(()=>$('#copy').textContent='Copy JSON',1600);
+};
+
+/* ---------------- UI text ---------------- */
+function updateKid(){
+  const used={};
+  S.spots.forEach((s,i)=>{ used[s.tid]=used[s.tid]||{n:0,done:0}; used[s.tid].n++; if(S.placed.has(i)) used[s.tid].done++; });
+  $('#legend').innerHTML = Object.keys(used).length ? TOPPINGS.filter(t=>used[t.id]).map(t=>
+    `<div class="chip" style="--c:${t.color}"><span class="dot">${t.emoji}</span>${used[t.id].n} ${t.name.toLowerCase()} <small>${used[t.id].done}/${used[t.id].n}</small></div>`).join('')
+    : '<span style="color:var(--muted)">Pick a topping on the right to get started.</span>';
+  const n=S.spots.length, d=S.placed.size;
+  $('#barFill').style.width = n ? (100*d/n)+'%' : '0';
+  $('#progText').textContent = n ? `${d} of ${n} placed` : '';
+}
+function updateUI(){
+  const A=S.A, lines=[];
+  lines.push(A.found ? `<span class="ok">✓ Pancake found</span>` : `<span class="warn">Couldn't find a golden pancake, so I'm guessing it fills the middle of the photo.</span>`);
+  lines.push(A.syrupPx ? `<span class="ok">✓ Syrup found: covers ${Math.round(A.syrupFrac*100)}% of the pancake</span>`
+                        : `<span class="warn">No syrup found, so toppings are scattered randomly. Try a lower detection threshold.</span>`);
+  if(A.syrupFrac>.6) lines.push(`<span class="warn">Over half the pancake counts as syrup. Brown cooking spots may be getting picked up, so try a higher threshold.</span>`);
+  lines.push(`<span>${S.spots.length} topping spots planned</span>`);
+  for(const s of S.short) lines.push(`<span class="warn">Only room for ${s.got} of ${s.want} ${s.t.name.toLowerCase()}. Try a smaller gap or fewer.</span>`);
+  $('#status').innerHTML=lines.join('');
+  const ppm=A.rad/(S.diam/2), r1=v=>Math.round(v*10)/10;
+  $('#json').value=JSON.stringify({
+    pancake_diameter_mm:S.diam,
+    coordinates:'mm from pancake center; +x = right, +y = down in the camera image',
+    syrup_coverage:r1(A.syrupFrac*100)/100, layout:S.style, gap_from_syrup_mm:S.gap,
+    spots:S.spots.map(s=>({topping:s.tid, x_mm:r1((s.x-A.cx)/ppm), y_mm:r1((s.y-A.cy)/ppm), size_mm:TBY[s.tid].mm}))
+  },null,2);
+  updateKid();
+}
+
+/* ---------------- Start ---------------- */
+buildToppings(); markSeg(); resize(); loadDemo('heart'); requestAnimationFrame(loop);
+</script>
+</body>
+</html>
