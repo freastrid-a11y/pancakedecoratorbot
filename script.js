@@ -309,20 +309,30 @@ for(const [k,label] of Object.entries(DEMOS)){
   const b=document.createElement('button'); b.className='btn'; b.textContent=label; b.dataset.k=k;
   b.onclick=()=>loadDemo(k); $('#demos').appendChild(b);
 }
-function loadDemo(k){ S.demo=k; const c=makeDemo(k); setSource(c,c.width,c.height); markDemo(); }
+function loadDemo(k){ if(typeof stopLive==='function') stopLive(); S.demo=k; const c=makeDemo(k); setSource(c,c.width,c.height); markDemo(); }
 function markDemo(){ document.querySelectorAll('#demos .btn').forEach(b=>b.classList.toggle('on', b.dataset.k===S.demo)); }
 
-// upload / drop
-function loadFile(f){
-  if(!f || !f.type.startsWith('image/')) return;
-  const url=URL.createObjectURL(f), img=new Image();
-  img.onload=()=>{ const sc=Math.min(1,1200/Math.max(img.naturalWidth,img.naturalHeight));
-    const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*sc); c.height=Math.round(img.naturalHeight*sc);
-    c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
-    S.demo=null; markDemo(); setSource(c,c.width,c.height); };
-  img.onerror=()=>{ URL.revokeObjectURL(url); };
-  img.src=url;
+// upload / drop / camera photos all end up here
+// Draws any image, video frame or canvas into a working canvas (max 1200 px) and analyzes it.
+function useFrame(el, w, h){
+  if(!w || !h) return false;
+  const sc=Math.min(1,1200/Math.max(w,h));
+  const c=document.createElement('canvas'); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
+  c.getContext('2d').drawImage(el,0,0,c.width,c.height);
+  S.demo=null; markDemo(); setSource(c,c.width,c.height);
+  return true;
 }
+// Loads a Blob/File (JPEG, PNG, ...) and analyzes it. Resolves true on success.
+function loadBlob(blob){
+  return new Promise(res=>{
+    if(!blob || !(blob.type||'').startsWith('image/')) return res(false);
+    const url=URL.createObjectURL(blob), img=new Image();
+    img.onload=()=>{ const ok=useFrame(img,img.naturalWidth,img.naturalHeight); URL.revokeObjectURL(url); res(ok); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); res(false); };
+    img.src=url;
+  });
+}
+function loadFile(f){ return loadBlob(f); }
 $('#file').onchange=e=>{ loadFile(e.target.files[0]); e.target.value=''; };
 const stage=$('#stage');
 stage.addEventListener('dragover',e=>{ e.preventDefault(); $('#dropHint').hidden=false; });
@@ -406,6 +416,156 @@ function updateUI(){
   },null,2);
   updateKid();
 }
+
+
+/* ---------------- Camera ----------------
+   Two live sources besides the demos:
+   - "pi": the robot's camera server (pi/camera_server.py). Live view is its MJPEG stream,
+     photos come from /api/snapshot.jpg, and /api/status tells us when the robot has
+     finished the syrup (POST /api/syrup-done) so we can take the photo on our own.
+   - "webcam": this device's camera through getUserMedia, for testing without a Pi.
+   Photos go through loadBlob/useFrame, the same path as uploads. */
+const CAM = { source:'demo', piBase:null, piSeq:null, pollTimer:null, pollBusy:false, stream:null, snapping:false };
+const liveImg=$('#live'), liveVid=$('#liveVideo');
+
+function camMsg(id, text, kind){ const el=$(id); el.textContent=text; el.className='camMsg'+(kind?' '+kind:''); }
+function showLive(which){
+  liveImg.hidden = which!=='img'; liveVid.hidden = which!=='video';
+  $('#liveBadge').hidden = !which;
+  if(which) $('#celebrate').hidden=true;
+}
+function stopLive(){
+  showLive(null);
+  liveImg.removeAttribute('src');   // closes the MJPEG connection
+  if(CAM.stream){ CAM.stream.getTracks().forEach(t=>t.stop()); CAM.stream=null; liveVid.srcObject=null; camMsg('#camMsg','Camera off.'); }
+}
+
+function setCamSource(v){
+  if(v===CAM.source) return;
+  stopLive(); stopPoll();
+  CAM.source=v;
+  document.querySelectorAll('#srcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  $('#srcDemo').hidden = v!=='demo'; $('#srcPi').hidden = v!=='pi'; $('#srcWebcam').hidden = v!=='webcam';
+  try{ localStorage.setItem('pancake.source', v); }catch(e){}
+  if(v==='pi') piConnect();
+  if(v==='webcam') listCams();
+}
+document.querySelectorAll('#srcSeg button').forEach(b=>b.onclick=()=>setCamSource(b.dataset.v));
+
+/* ----- Raspberry Pi camera server ----- */
+function piBaseFromInput(){
+  let u=$('#piUrl').value.trim();
+  if(!u) return location.protocol.startsWith('http') ? '' : null; // same server the page came from
+  if(!/^https?:\/\//i.test(u)) u='http://'+u;
+  return u.replace(/\/+$/,'');
+}
+async function piFetch(path, opts={}){
+  const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(), opts.timeout||4000);
+  try{ const r=await fetch(CAM.piBase+path,{cache:'no-store',signal:ctl.signal,...opts}); if(!r.ok) throw new Error('HTTP '+r.status); return r; }
+  finally{ clearTimeout(to); }
+}
+function piButtons(on){ $('#piLive').disabled=!on; $('#piSnap').disabled=!on; }
+async function piConnect(){
+  stopPoll(); piButtons(false);
+  const base=piBaseFromInput();
+  if(base===null){ camMsg('#piMsg','Type the Pi\'s address, e.g. http://raspberrypi.local:8000','err'); return; }
+  try{ localStorage.setItem('pancake.piUrl', $('#piUrl').value.trim()); }catch(e){}
+  CAM.piBase=base; camMsg('#piMsg','Connecting…');
+  try{
+    const st=await (await piFetch('/api/status')).json();
+    if(!st.camera_ok){ camMsg('#piMsg',`Connected, but the camera isn't working: ${st.error||'unknown error'}`,'err'); return; }
+    CAM.piSeq=st.syrup_done;
+    camMsg('#piMsg',`✓ Connected to ${st.camera} camera. Waiting for the robot…`,'ok');
+    piButtons(true); startPoll();
+    if(!S.src || S.demo) piLive();
+  }catch(e){
+    camMsg('#piMsg',`Can't reach the camera server at ${base||location.origin}. Is pi/camera_server.py running, and is this the right address?`,'err');
+  }
+}
+function piLive(){
+  if(CAM.source!=='pi' || CAM.piBase===null) return;
+  liveImg.onerror=()=>{ if(!liveImg.hidden){ showLive(null); camMsg('#piMsg','Live view stopped. Press Connect to try again.','err'); } };
+  liveImg.src=CAM.piBase+'/api/stream?t='+Date.now();
+  showLive('img');
+}
+async function piSnap(why){
+  if(CAM.snapping) return; CAM.snapping=true;
+  try{
+    const blob=await (await piFetch('/api/snapshot.jpg?t='+Date.now(),{timeout:8000})).blob();
+    if(!(await loadBlob(blob))) throw new Error('not an image');
+    stopLive();
+    camMsg('#piMsg', why==='auto' ? `✓ The robot finished the syrup, so I took the photo (${new Date().toLocaleTimeString()}).`
+                                  : `✓ Photo taken (${new Date().toLocaleTimeString()}).`, 'ok');
+  }catch(e){ camMsg('#piMsg','Couldn\'t get a photo from the camera server.','err'); }
+  finally{ CAM.snapping=false; }
+}
+function startPoll(){ stopPoll(); CAM.pollTimer=setInterval(piPoll, 1000); }
+function stopPoll(){ if(CAM.pollTimer){ clearInterval(CAM.pollTimer); CAM.pollTimer=null; } }
+async function piPoll(){
+  if(CAM.pollBusy || CAM.source!=='pi') return; CAM.pollBusy=true;
+  try{
+    const st=await (await piFetch('/api/status',{timeout:2500})).json();
+    if(CAM.piSeq!==null && st.syrup_done!==CAM.piSeq && $('#piAuto').checked){ CAM.piSeq=st.syrup_done; await piSnap('auto'); }
+    else CAM.piSeq=st.syrup_done;
+  }catch(e){ /* a missed poll is fine; the next one retries */ }
+  finally{ CAM.pollBusy=false; }
+}
+$('#piConnect').onclick=piConnect;
+$('#piUrl').addEventListener('keydown',e=>{ if(e.key==='Enter') piConnect(); });
+$('#piLive').onclick=piLive;
+$('#piSnap').onclick=()=>piSnap('button');
+piButtons(false);
+
+/* ----- This computer's webcam ----- */
+async function listCams(){
+  if(!navigator.mediaDevices?.enumerateDevices) return;
+  try{
+    const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
+    const sel=$('#camSelect'), cur=sel.value;
+    sel.innerHTML='<option value="">Default camera</option>'+devs.map((d,i)=>`<option value="${d.deviceId}">${(d.label||'Camera '+(i+1)).replace(/</g,'&lt;')}</option>`).join('');
+    if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  }catch(e){}
+}
+async function camStart(){
+  if(!navigator.mediaDevices?.getUserMedia){
+    camMsg('#camMsg','This browser can only use the camera on a secure page (https:// or http://localhost).','err'); return; }
+  stopLive();
+  const id=$('#camSelect').value;
+  try{
+    CAM.stream=await navigator.mediaDevices.getUserMedia({audio:false, video: id ? {deviceId:{exact:id}} : {width:{ideal:1280},height:{ideal:960}}});
+    liveVid.srcObject=CAM.stream; await liveVid.play().catch(()=>{});
+    showLive('video'); camMsg('#camMsg','✓ Camera on. Line up the pancake, then take the photo.','ok');
+    listCams(); // labels only show up after permission is granted
+  }catch(e){
+    const why = e.name==='NotAllowedError' ? 'Camera permission was blocked. Allow it in the address bar and try again.'
+              : e.name==='NotFoundError'   ? 'No camera found on this device.'
+              : e.name==='NotReadableError'? 'The camera is busy in another app.'
+              : 'Couldn\'t start the camera ('+e.name+').';
+    camMsg('#camMsg',why,'err');
+  }
+}
+async function camSnap(){
+  if(!CAM.stream){ await camStart(); if(!CAM.stream) return; await new Promise(r=>setTimeout(r,400)); }
+  if(!liveVid.videoWidth){ await new Promise(r=>liveVid.addEventListener('loadeddata',r,{once:true})); }
+  if(useFrame(liveVid, liveVid.videoWidth, liveVid.videoHeight)){ stopLive(); camMsg('#camMsg',`✓ Photo taken (${new Date().toLocaleTimeString()}). Press Live view to retake.`,'ok'); }
+}
+$('#camStart').onclick=camStart;
+$('#camSnap').onclick=camSnap;
+$('#camSelect').onchange=()=>{ if(CAM.stream) camStart(); };
+
+/* ----- Pick the starting source -----
+   ?source=pi|webcam|demo and ?pi=<address> in the URL win; otherwise the last choice is remembered.
+   A page served by the camera server itself starts on the Pi tab. */
+(function initCamera(){
+  const q=new URLSearchParams(location.search); let saved=null, savedUrl='';
+  try{ saved=localStorage.getItem('pancake.source'); savedUrl=localStorage.getItem('pancake.piUrl')||''; }catch(e){}
+  $('#piUrl').value = q.get('pi') ?? savedUrl;
+  document.querySelectorAll('#srcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v==='demo'));
+  let want=q.get('source') || saved;
+  if(!want){
+    fetch('api/status',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(st=>{ if(st && 'syrup_done' in st) setCamSource('pi'); }).catch(()=>{});
+  } else if(want!=='demo') setCamSource(want);
+})();
 
 /* ---------------- Start ---------------- */
 buildToppings(); markSeg(); resize(); loadDemo('heart'); requestAnimationFrame(loop);
