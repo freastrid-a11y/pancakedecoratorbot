@@ -1,0 +1,19 @@
+# Starts the camera server when the Pi boots.
+#   sudo cp pi/pancake-camera.service /etc/systemd/system/
+#   (edit User= and the paths below if your checkout is somewhere else)
+#   sudo systemctl enable --now pancake-camera
+#   journalctl -u pancake-camera -f        # see its output
+[Unit]
+Description=Pancake decorator camera server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/pancakedecoratorbot
+ExecStart=/usr/bin/python3 /home/pi/pancakedecoratorbot/pi/camera_server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

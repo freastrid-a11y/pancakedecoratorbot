@@ -1,1 +1,3 @@
 playwright>=1.40
+# optional: runs the USB-webcam path in tests/test_camera_server.py
+opencv-python-headless
