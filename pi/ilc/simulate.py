@@ -7,8 +7,9 @@
     python3 pi/ilc/simulate.py --no-ilc              # baseline: same commands every pancake
     python3 pi/ilc/simulate.py --gain 0.3 --lead-mm 4
 
-Prints the width error for every pancake, and saves photos of the first and last
-pancake to test-output/ilc/ (side by side, with the measured syrup outlined).
+Prints the width error for every pancake and a before -> after summary, and saves
+to test-output/ilc/: photos of the first and last pancake (side by side, with the
+measured syrup outlined), and report-<control>.html with the photos and charts.
 Needs only numpy.
 """
 import argparse
@@ -48,6 +49,7 @@ def run(design_names, pancakes=10, control="flow", gain=0.5, lead_mm=None, smoot
         s = ILCSettings("speed", gain=gain, lead_mm=lead_mm, smooth_mm=smooth_mm,
                         nominal=nominal.speed, lo=8.0, hi=60.0)
     folder = tempfile.mkdtemp(prefix="ilc-sim-")
+    reports = []
     learner = Learner(folder, calib, s)
     results = {}
     for name in design_names:
@@ -56,7 +58,7 @@ def run(design_names, pancakes=10, control="flow", gain=0.5, lead_mm=None, smoot
         say(f"\n{design.name}: {len(design.strokes)} stroke(s), learning {control}"
             + ("" if learn else " (ILC OFF)"))
         say("  pancake   measured RMS   true RMS   within ±1 mm   end blobs")
-        rows, photos = [], []
+        rows, photos, profiles = [], [], []
         for k in range(1, pancakes + 1):
             points, cmds = learner.commands(design)
             drawn = robot.draw(points, cmds)
@@ -73,13 +75,32 @@ def run(design_names, pancakes=10, control="flow", gain=0.5, lead_mm=None, smoot
                 f"{m['within_1mm'] * 100:5.0f}%       {blob:6.0f} mm³  {bar}")
             if k in (1, pancakes):
                 photos.append(outlined(photo, rep["mask"], camera, points))
+                profiles.append([(x.width.tolist(), x.valid.tolist()) for x in rep["measurements"]])
         results[design.name] = rows
         if out:
             os.makedirs(out, exist_ok=True)
+            tag = f"{control}{'' if learn else '-noilc'}"
+            for which, img in (("first", photos[0]), ("last", photos[-1])):
+                write_png(os.path.join(out, f"{design.name}-{tag}-{which}.png"), img)
             gap = np.full((photos[0].shape[0], 12, 3), 255, np.uint8)
-            path = os.path.join(out, f"{design.name}-{control}{'' if learn else '-noilc'}.png")
+            path = os.path.join(out, f"{design.name}-{tag}.png")
             write_png(path, np.concatenate([photos[0], gap, photos[-1]], axis=1))
+            reports.append({"design": design.name, "tag": tag, "rows": rows, "profiles": profiles,
+                            "targets": [st.width for st in design.strokes]})
             say(f"  saved {os.path.relpath(path)} (pancake 1 | pancake {pancakes})")
+
+    say(f"\nBefore -> after ({'learning ' + control if learn else 'learning OFF'}): "
+        f"true width error, pancake 1 -> pancake {pancakes}")
+    for name, rows in results.items():
+        a, b = rows[0], rows[-1]
+        change = (b["true_rms"] - a["true_rms"]) / a["true_rms"] * 100
+        say(f"  {name:8} {a['true_rms']:5.2f} mm -> {b['true_rms']:5.2f} mm  ({change:+4.0f}%)   "
+            f"within ±1 mm: {a['within_1mm'] * 100:3.0f}% -> {b['within_1mm'] * 100:3.0f}%   "
+            f"end blobs: {a['blob_mm3']:4.0f} -> {b['blob_mm3']:4.0f} mm³")
+    if out and reports:
+        from ilc.report import write_report
+        path = write_report(out, reports, control, learn, pancakes)
+        say(f"\nReport with before/after photos and charts: {os.path.relpath(path)}")
     return results
 
 
