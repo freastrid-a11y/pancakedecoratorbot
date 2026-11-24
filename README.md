@@ -122,6 +122,9 @@ Add a line to the `TOPPINGS` list near the top of `script.js`:
 
 ## Tests
 
+For testing by hand, from a laptop to real pancakes on the robot, see [TESTING.md](TESTING.md).
+
+
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
