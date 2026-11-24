@@ -2,3 +2,5 @@ test-output/
 __pycache__/
 .venv/
 .DS_Store
+pi/ilc/calibration.json
+pi/ilc/corrections/
