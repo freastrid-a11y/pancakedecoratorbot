@@ -134,6 +134,7 @@ python tests/test_camera_server.py   # the Pi server, standard library only; wit
 python tests/test_layouts.py         # every demo × every layout; prints what was detected and planned
 python tests/test_tapping.py         # taps every spot, checks the celebration shows, screenshots projector mode
 python tests/test_camera_ui.py       # starts the server and checks live view, Take photo, auto photo, webcam mode and a wrong address
+python tests/test_ilc.py             # the learning loop (ILC) on the simulated robot, and through the camera server
 ```
 
 The browser tests use [Playwright](https://playwright.dev/python/). Set `CHROMIUM_PATH` to use a Chrome you already have instead of Playwright's. `test_camera_ui.py` uses Chrome's built-in fake webcam, so no camera is needed. Screenshots are saved to `test-output/` (ignored by git). The browser tests print `ERRORS: []` / `[]` when there are no JavaScript errors. A font-loading error is normal if you're offline.
@@ -143,4 +144,5 @@ The browser tests use [Playwright](https://playwright.dev/python/). Set `CHROMIU
 - **Only tested on drawn demo pancakes so far.** Real photos will need the threshold tuned. Dark cooking spots can be mistaken for syrup, and shiny glare on syrup can be missed. Use the detection view while tuning.
 - **The camera code hasn't run on a real Pi yet.** It was tested with a sample photo, a video file through OpenCV, and Chrome's fake webcam. Expect to adjust the camera position and the detection threshold the first time.
 - The camera is assumed to be roughly straight overhead. A tilted camera would need perspective correction.
-- Ideas: check placements with the camera (the ILC loop from our notes), sound effects, and a bigger touch-only "kid mode" for a small screen.
+- The robot can learn to draw better syrup lines from the camera photos (iterative learning control). It's tested on a simulated robot so far: see [pi/ilc/README.md](pi/ilc/README.md).
+- Ideas: check topping placements with the camera, sound effects, and a bigger touch-only "kid mode" for a small screen.
