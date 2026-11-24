@@ -20,7 +20,21 @@ Only `numpy` is needed. Reading camera JPEGs on the robot also needs OpenCV or P
 python3 pi/ilc/simulate.py
 ```
 
-This runs every built-in design (heart, star, spiral, smiley, A) for 10 simulated pancakes and prints the width error for each one. It also saves the first and last pancake side by side to `test-output/ilc/`, with the detected syrup outlined in pink and the planned path in cyan.
+This runs every built-in design (heart, star, spiral, smiley, A) for 10 simulated pancakes. It prints the width error for each pancake, then a before → after summary:
+
+```
+Before -> after (learning flow): true width error, pancake 1 -> pancake 10
+  heart     0.85 mm ->  0.16 mm  ( -81%)   within ±1 mm:  91% -> 100%   end blobs:   85 ->   79 mm³
+  spiral    1.04 mm ->  0.11 mm  ( -90%)   within ±1 mm:  94% -> 100%   end blobs:   85 ->   22 mm³
+  ...
+```
+
+Open **`test-output/ilc/report-flow.html`** in a browser to see the before and after. For each design it shows:
+- the first and last pancake photos, with the detected syrup outlined in pink and the planned path in cyan;
+- the width error for every pancake;
+- the line width along the whole path, before and after, against the target.
+
+Each run writes its own report (`report-speed.html`, `report-flow-noilc.html`), so you can compare them side by side.
 
 ```bash
 python3 pi/ilc/simulate.py --design heart -n 15
@@ -61,6 +75,7 @@ What's left on the smiley and the A is mostly at **stroke starts**. The robot st
 | `learn.py` | The ILC update, the per-design corrections store, and `Learner`, which ties them together. |
 | `simulator.py` | The simulated robot and camera. |
 | `simulate.py` | Runs the loop on the simulator. |
+| `report.py` | Writes the before/after report page for a simulator run. |
 | `robot_loop.py` | Runs the loop on the real robot through the camera server, plus the `calibrate` and `status` commands. |
 
 **Calibration.** Camera pixels have to be matched to robot millimetres. The robot draws five syrup dots at known positions (`CALIBRATION_DOTS` in `vision.py`: a 80 mm square plus an extra dot so it's not symmetric). The code finds them in a photo and fits a homography, which also handles a slightly tilted camera. On the simulator it's accurate to 0.02 mm.
